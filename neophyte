@@ -1,0 +1,235 @@
+import pandas as pd
+def normalize(path):
+    y=[]
+    n=len(path)
+    for i in range(n):
+        y.append(path[i].to_string(header=False,index=False))
+    for i in range(n):
+        y[i]=y[i].replace(' ','')
+    return y    
+def get_factor(a):
+    fa=[a]
+    for i in range(int(a/2),0,-1):
+        if a%i==0:
+            fa.append(i)
+    return fa
+def check(s,goal_area):
+    a=0
+    for i in range(len(s)):
+        for j in range(len(s.columns)):
+            if s.iloc[i,j]=='o':
+                a+=1
+            elif s.iloc[i,j]==None:
+                return False
+    if a==1 and s.size==goal_area:
+        return True
+    return False                
+def ff(raisin_,s):
+    h,v=list(s.columns),list(s.index.values)
+    for i in range(len(raisin_)-1,-1,-1):
+        p=raisin_[i]
+        if p[0] not in v or p[1] not in h:
+            raisin_.remove(p)
+        elif s.loc[p[0],p[1]]==None:
+            raisin_.remove(p)
+        
+    return raisin_
+def find_appropriate(c,path):
+    s=c.copy()
+    for i in range(len(path)):
+        p=path[i]
+        v,h=list(p.index.values),list(p.columns)
+        s.iloc[v,h]=None
+    s=s.dropna(how='all')
+    s=s.dropna(how='all',axis=1)
+    return s.copy()
+def cut(cake):
+    c=cake.split('\n')
+    v,h=len(c),len(c[0])
+    c=[list(i) for i in c]
+    marker=False
+    c=pd.DataFrame(c)
+    raisin_=[]
+    raisin_row,raisin_column=[],[]
+    marker=0
+    for i in range(v):
+        for j in range(h):
+            if c.iloc[i][j]=='o':
+                raisin_.append([i,j])
+                raisin_row.append(i)
+                raisin_column.append(j)
+                if i==0:
+                    marker+=1
+    n=len(raisin_)
+    goal_area=int(v*h/n)
+    factor=get_factor(goal_area)
+    solution=[[]]
+    column,row=list(c.columns),list(c.index.values)
+    for i in range(len(c)):
+        Marker=False 
+        r=[raisin_[j] for j in range(len(raisin_)) if raisin_[j][0]==i]
+        if len(r)!=0:
+            s=c.copy() 
+            vv,hh=[],[]
+            while len(r)!=0:
+                path=solution.pop(-1)
+                s=find_appropriate(c,path)
+                r=ff(r,s)
+                if len(r)==0:
+                    path.append(solution)
+                    break                
+                start=r.pop(0)
+                s=s.dropna(how='all')
+                s=s.dropna(how='all',axis=1)
+                t,aa=0,0
+                for j in range(len(s.columns)):
+                    if s.iloc[0,j]!=None:
+                        break
+                aa=aa+j
+                for j in range(len(factor)):
+                    if factor[j]<=len(s):
+                        a=int(goal_area/factor[j])
+                        ss=s.iloc[:factor[j],aa:aa+a]
+                        v,h=list(ss.index.values),list(ss.columns)
+                        if start[0] not in v:
+                            ss=s.iloc[len(ss)-factor[j]:,aa:aa+a]
+                        
+                        if check(ss,goal_area) and start[1] in list(ss.columns):
+                            path.append(ss.copy())
+                            solution.append(path.copy())
+                            h,v=list(ss.columns),list(ss.index.values)
+                            if len(path)==n:
+                                p=normalize(path)
+                                return p
+                            if (len(r)==0 and h[-1]!=column[-1]) or (h[-1]!=column[-1] and Marker==True):   
+                                aaa=h[-1]                               
+                                rr=[raisin_[k] for k in range(len(raisin_)) if raisin_[k][1]>aaa]
+                                rr=ff(rr,s)
+                                numbers=0
+                                while len(rr)!=0 and aaa!=column[-1]:
+                                    if numbers!=0:                                        
+                                        p=solution.pop(-1)
+                                    else:
+                                        p=path
+                                    starts=rr.pop(0)
+                                    s=c.copy()
+                                    ss=find_appropriate(s,p)
+                                    hh,vv=list(ss.columns),list(ss.index.values)
+                                    if ss.size==0:
+                                        break
+                                    for o in range(len(hh)):
+                                        if ss.loc[vv[0],hh[o]]!=None:
+                                            break
+                                    ss=ss.loc[:,hh[o]:]
+                                    p_f=0
+                                    for k in range(len(factor)):
+                                        
+                                        if list(ss.index.values).index(starts[0])<factor[k]<=len(ss):
+                                            b=int(goal_area/factor[k])
+                                            sss=ss.iloc[:factor[k],:b]
+                                            h,v=list(sss.columns),list(sss.index.values)
+                                            if starts[0] not in v:
+                                                sss=ss.iloc[len(ss)-factor[k]:,:b]
+                                            if check(sss,goal_area) and starts[1] in h:
+                                                numbers+=1
+                                                p.append(sss.copy())
+                                                if len(p)==n:
+                                                    return normalize(p)
+                                                solution.append(p.copy())
+                                                p.pop(-1)
+                                                h=list(sss.columns)
+                                                aaa=h[-1]
+                                            else:
+                                                p_f+=1
+                                        else:
+                                            p_f+=1
+                                    if p_f==len(factor):
+                                        goal_h,goal_v=list(s.columns),list(s.index.values)
+                                        rr=[raisin_[k] for k in range(len(raisin_)) if raisin_[k][1]>aaa]
+                                        numberss=0
+                                        while aaa!=goal_h[-1]:
+                                            if numberss!=0:
+                                                p=solution.pop(-1)
+                                            else:
+                                                p=path.copy()
+                                            startss=rr.pop(-1)
+                                            ss=find_appropriate(c,p)
+                                            ss=ss.loc[:,hh[o]:]
+                                            for k in range(len(factor)):
+                                                if factor[k]<=len(ss):
+                                                    b=int(goal_area/factor[k])
+                                                    sss=ss.iloc[:factor[k],:b]
+                                                    if check(sss,goal_area):
+                                                        numberss+=1
+                                                        p.append(sss.copy())
+                                                        if len(p)==n:
+                                                            return normalize(p)
+                                                        solution.append(p.copy())
+                                                        p.pop(-1)
+                                                        h=list(sss.columns)
+                                                        aaa=h[-1]
+                                        p.pop(-1)
+                                        path=p.copy()  
+                                        path.pop(-1)
+                                    else:
+                                        path.pop(-1)                                              
+                            else:
+                                path.pop(-1)
+                        else:
+                            t+=1
+                    else:
+                        t+=1
+                    if t==len(factor):
+                        r.insert(0,start)
+                        Marker==False
+                        number=0
+                        while len(r)!=0:
+                            start=r.pop(-1)
+                            s=c.copy()
+                            if number!=0:
+                                path=solution.pop(-1)
+                            s=find_appropriate(s,path)
+                            for j in range(len(factor)):
+                                if factor[j]<=len(s):
+                                    a=int(goal_area/factor[j])
+                                    ss=s.iloc[:factor[j],-a:]
+                                    if check(ss,goal_area) and start[1] in list(ss.columns):
+                                        Marker=True
+                                        number+=1
+                                        path.insert(-number,ss.copy())
+                                        solution.append(path.copy())
+                                        if len(path)==n:
+                                            return normalize(path)
+                                        path.pop(-1)
+                        if Marker==False and len(solution)==0:
+                            return []
+                        elif Marker==False and len(solution)!=0:
+                            while Marker==False and len(solution)!=0:
+                                path=solution.pop(-1)
+                                s=c.copy()
+                                ss=find_appropriate(s,path)
+                                r=[raisin_[j] for j in range(len(raisin_)) if raisin_[j][0]==i]
+                                r=ff(r,ss)
+                                start=r.pop(-1)
+                                for j in range(len(factor)):
+                                    if factor[j]<=len(s):
+                                        a=int(goal_area/factor[j])
+                                        sss=ss.iloc[:factor[j],:a]
+                                        if check(sss,goal_area) and start[1] in list(sss.columns):
+                                            Marker=True
+                                            number+=1
+                                            path.append(sss.copy())
+                                            solution.append(path.copy())
+                                            if len(path)==n:
+                                                return normalize(path)
+                                            path.pop(-1)
+                            if Marker==False:
+                                return []
+                        else:
+                            return []
+                                
+                            
+                        
+                                    
+
+    return []
